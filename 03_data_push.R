@@ -1,0 +1,1 @@
+# Script to push the csv into a local DB #
