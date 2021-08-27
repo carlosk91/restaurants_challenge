@@ -4,3 +4,7 @@
 .Ruserdata
 *.csv
 *.Rproj
+*.yaml
+*.docx
+*.mwb
+*DataSet/
