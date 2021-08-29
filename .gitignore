@@ -8,3 +8,4 @@
 *.docx
 *.mwb
 *DataSet/
+.DS_Store
