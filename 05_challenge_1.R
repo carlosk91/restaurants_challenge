@@ -7,39 +7,63 @@ max_month <-
 #### Question 1 ####
 # The top restaurant has an average of 33 daily customers on holidays
 top_five_rest_in_holiday.barplot <-
-  top_five_rest_in_holiday %>%
-  mutate(position = paste('Restaurant Top ', row_number())) %>%
+  ggplotly(top_five_rest_in_holiday %>%
+  mutate(position = paste0('Restaurant #', row_number())) %>%
   ggplot(aes(y = avg_daily_visitors_on_holiday, x = position)) +
-  geom_bar(stat = "identity")
+  geom_bar(stat = "identity") +
+  labs(
+    title = 'Top 5 restaurants avg daily visitors on holiday',
+    x = 'Top 5 restaurants',
+    y = 'Avg daily visitors on holiday'
+  ))
 
 # But in reality th rest of the top restaurants are no that easy to separate.
 # The next top restaurants can be re-arranged using the median, or the total
 # distribution.
 top_five_rest_in_holiday.boxplot <-
-  restaurant_visitors %>%
+  ggplotly(restaurant_visitors %>%
   inner_join(top_five_rest_in_holiday %>%
-               mutate(position = paste('Restaurant Top ', row_number())),
+               mutate(position = paste0('Restaurant #', row_number())),
              by = c('id' = 'restaurant_id')) %>%
+  left_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
+  filter(holiday_flg == 1) %>%
   group_by(position, visit_date) %>%
   summarise(visitors = sum(reserve_visitors)) %>%
-  ggplot(aes(y = visitors, colour = position)) +
-  geom_boxplot()
+  ggplot(aes(x = position, y = visitors, fill = position)) +
+  geom_boxplot() +
+  labs(
+    title = 'Top 5 restaurants daily visitors on holiday',
+    x = 'Top 5 restaurants',
+    y = 'Quartiles of daily visitors on holiday', 
+    fill = 'Top 5 Restaurants'
+  ) + 
+  theme(legend.position = "none"))
 
 # Its important to make sure that the distribution is normal when you want to
 # compare mean against mean.
 # Restaurants from 2 to 5 follow a Beta-like distribution.
 top_five_rest_in_holiday.densityplot <-
-  restaurant_visitors %>%
+  ggplotly(restaurant_visitors %>%
   inner_join(top_five_rest_in_holiday %>%
                mutate(position = paste('Restaurant Top ', row_number())),
-             by = c('id' = 'restaurant_id')) %>%
+             by = c('id' = 'restaurant_id'))  %>%
+  left_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
+  filter(holiday_flg == 1) %>%
   group_by(position, visit_date) %>%
   summarise(visitors = sum(reserve_visitors)) %>%
-  ggplot(aes(x = visitors, colour = position)) +
-  geom_density()
+  ggplot(aes(x = visitors, color = position, fill = position)) +
+  geom_density(alpha = 0.15) +
+  labs(
+    title = 'Top 5 restaurants distribution of daily visitors on holiday',
+    x = 'Visitors on holiday',
+    y = 'Distribution', 
+    fill = 'Top 5 Restaurants'
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  guides(color = "none"))
 
 #### Question 2 ####
-median_weekday_restaurant_visitors <-
+median_weekday_visitors <-
   restaurant_visitors %>%
   inner_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
   mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
@@ -47,16 +71,18 @@ median_weekday_restaurant_visitors <-
   summarise(visitors = sum(reserve_visitors)) %>%
   ungroup() %>%
   group_by(day_of_week) %>%
-  summarise(median_visitors = median(visitors))
+  summarise(median_visitors = median(visitors, na.rm = T),
+            avg_visitors = mean(visitors, na.rm = T)) %>%
+  ungroup()
 
 # Saturday is the weekday with more avg costumers (bar plot).
 # But the median (blue points) is almost the same on Friday and Saturday.
 # The distribution is skewed to the right, that's whey there's a big difference
 # between median and mean.
 weekday_w_more_visitors.barplot <-
-  weekday_w_more_visitors %>%
+  ggplotly(weekday_w_more_visitors %>%
   mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
-  inner_join(median_weekday_restaurant_visitors) %>%
+  inner_join(median_weekday_visitors) %>%
   ggplot(aes(x = day_of_week)) +
   geom_bar(stat = 'identity',
            aes(y = avg_visitors_by_weekday),
@@ -64,23 +90,22 @@ weekday_w_more_visitors.barplot <-
   geom_point(aes(y = median_visitors), colour = "blue") +
   labs(title = 'Avg and Meadian visitors by weekday',
        x = 'Weekday',
-       y = 'Avg (bar plot) and Median (blue dots) visitors')
+       y = 'Avg (bar plot) and Median (blue dots) visitors'))
 
 # But the distribution of Saturday tends to be higher.
 # Just with almost the same median.
 weekday_w_more_visitors.boxplot <-
-  restaurant_visitors %>%
+  ggplotly(restaurant_visitors %>%
   inner_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
   mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
   group_by(visit_date, day_of_week) %>%
   summarise(visitors = sum(reserve_visitors)) %>%
-  ggplot(aes(y = visitors, colour = day_of_week)) +
+  ggplot(aes(y = visitors, x = day_of_week, fill = day_of_week)) +
   geom_boxplot() +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
   labs(title = 'Distribution of visitors by weekday',
        x = 'Weekday',
-       y = 'Visitors')
+       y = 'Visitors') +
+  guides(fill = "none"))
 
 # In average, Saturday is the weekday with more avg visitors by store.
 # In other words you could say that on Saturday you have an expected value of
@@ -96,7 +121,8 @@ median_weekday_restaurant_visitors_by_rest <-
   summarise(visitors = sum(reserve_visitors)) %>%
   ungroup() %>%
   group_by(day_of_week) %>%
-  summarise(median_visitors = median(visitors))
+  summarise(median_visitors = median(visitors),
+            avg_visitors = mean(visitors))
 
 weekday_w_more_visitors_by_rest.barplot <-
   weekday_w_more_visitors_by_rest %>%
