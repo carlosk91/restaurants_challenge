@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, include=FALSE}
 source("01_libraries.R", local = knitr::knit_global())
 source("02_functions.R", local = knitr::knit_global())
+source('03_data_push.R', local = knitr::knit_global())
 source("04_data_read.R", local = knitr::knit_global())
 source("05_data_analytics.R", local = knitr::knit_global())
 ```
@@ -36,3 +37,6 @@ plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+![Japan population density](jp_population_denity.png)
+

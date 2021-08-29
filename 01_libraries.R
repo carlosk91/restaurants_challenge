@@ -14,4 +14,6 @@ library(forecast) ## For forecasting purposes
 library(mapdata) ## For analytics purposes
 library(ggplot2) ## For analytics purposes
 library(ggfortify) ## For analytics purposes
+library(ggmap) ## For analytics purposes
+library(gridExtra) ## For analytics purposes
 library(rmarkdown) ## For reporting purposes

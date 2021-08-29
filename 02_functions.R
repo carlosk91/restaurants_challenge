@@ -32,6 +32,19 @@ levels_weekday <- function(){
   return(levels)
 }
 
+#' Timeserie without holdout
+#' 
+#' Function to get a train set for a time serie given h holdout.
+#' 
+#' @param timeserie Timeserie.
+#' @param h Holdout. Number of data points to leave out.
+#' @returns ts without the latest h data points.
+ts_wo_holdout <- function(timeserie, h){
+  ts(head(timeserie, length(timeserie) - holdout),
+     start = start(timeserie),
+     frequency = frequency(timeserie))
+}
+
 
 #### DB functions ####
 
