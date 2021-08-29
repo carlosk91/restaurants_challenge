@@ -3,6 +3,10 @@
 ### developer: carlosk91
 ###
 ### Objective: Solve the challenge in an organized fashion
+###
+### IMPORTANT Data push is only available after creating a local host schema.
+### You will not be able to run the code if you dont create the schema and 
+### write the keys to a Yaml.
 
 #### Scripts to answer challenge ####
 source('01_libraries.R') # Required libraries

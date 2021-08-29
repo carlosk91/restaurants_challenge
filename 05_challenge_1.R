@@ -1,4 +1,4 @@
-# Answering The challenge with an analytical approach
+# Answering Challenge 1
 # Utility
 max_date <- max(restaurant_visitors$visit_date)
 max_month <-

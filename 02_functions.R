@@ -32,6 +32,25 @@ levels_weekday <- function(){
   return(levels)
 }
 
+#' Week Difference
+#'
+#' Function to get the number of weeks between two dates.
+#' i.e. Aug 29, 2021 - Aug 28, 2021 would be 0, but 
+#' Aug 30, 2021 - Aug 29, 2021 would be 1
+#' 
+#' @param start_date First date of the interval
+#' @param end_date Second date of the interval
+#' @returns Integer with the number of months
+week_dif <- function(start_date, end_date) {
+  x <- interval(floor_date(start_date,
+                           unit = 'weeks',
+                           week_start = 1),
+                floor_date(end_date,
+                           unit = 'weeks',
+                           week_start = 1)) %/% weeks(1)
+  return(x)
+}
+
 #' Timeserie without holdout
 #' 
 #' Function to get a train set for a time serie given h holdout.
