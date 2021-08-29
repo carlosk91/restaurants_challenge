@@ -2,7 +2,10 @@
 title: "DiDi Challenge"
 author: "Carlos Kelly"
 date: "2021-08-29"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include = FALSE}
@@ -13,8 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 source("00_main.R", local = knitr::knit_global())
 ```
 
-
-## Summary and context
+# Summary and context
 
 This markdown document will answer the questions shared by DiDi hiring manager.
 All of these are answered using SQL and R script.
@@ -24,9 +26,15 @@ that a simple run of the script wont publish the result again in another compute
 
 I'll present each question and follow it by the chunk of SQL needed to answer it.
 
-## Challenge 1
+# Challenge 1 
+
+## Question 1 {.tabset .tabset-fade .tabset-pills}
 
 > Write the SQL queries necessary to generate a list of the five restaurants that have the highest average number of visitors on holidays. The result table should also contain that average per restaurant.
+
+IMPORTANT: I didn't consider days without operation.
+
+### Summary
 
 ```{r con, echo=FALSE}
 con <- connect_to_db()
@@ -35,16 +43,18 @@ con <- connect_to_db()
 ```{sql, connection = con}
 SELECT id as restaurant_id, avg(visitors) as avg_daily_visitors_on_holiday
 FROM 
-(SELECT id, visit_date, sum(reserve_visitors) as visitors
+(SELECT rv.id, visit_date, sum(rv.reserve_visitors) as visitors
 FROM restaurant_visitors rv
 LEFT JOIN date_info di on rv.visit_date = di.calendar_date
-WHERE holiday_flg = 1
+WHERE di.holiday_flg = 1
 GROUP BY id, visit_date) hrv
 GROUP BY id
 ORDER BY avg_daily_visitors_on_holiday desc
 LIMIT 5
 
 ```
+
+### Additional Analysis
 
 The top restaurant has an average of 33 daily customers on holidays:
 
@@ -66,20 +76,22 @@ requested.
 top_five_rest_in_holiday.densityplot
 ```
 
-## Challenge 2
+## Question 2 {.tabset .tabset-fade .tabset-pills}
 
 > Use SQL to discover which day of the week there are usually more visitors on average in restaurants.
 
-Answering in total and not by restaurant
+IMPORTANT: I didn't consider days without operation.
+
+### Total visitors
 
 ```{sql, connection = con}
-select
+SELECT
 day_of_week,
 avg(visitors) as avg_visitors_by_weekday
 FROM
 (SELECT 
-visit_date, 
-day_of_week, 
+rv.visit_date, 
+di.day_of_week, 
 sum(reserve_visitors) as visitors
 FROM restaurant_visitors rv
 LEFT JOIN date_info di on rv.visit_date = di.calendar_date
@@ -103,65 +115,600 @@ The distribution is skewed to the right, that's whey there's a big difference be
 weekday_w_more_visitors.boxplot
 ```
 
-Its important to view the full distribution when a mean vs mean analysis is
-requested. 
-
-```{r top_five_rest_in_holiday.densityplot}
-top_five_rest_in_holiday.densityplot
-```
-
-Answering  by restaurant
+### By restaurant
 
 ```{sql, connection = con}
-select
+SELECT
 day_of_week,
-avg(visitors) as avg_visitors_by_weekday
+avg(visitors) as avg_visitors_by_store_by_weekday
 FROM
 (SELECT 
+id, 
 visit_date, 
 day_of_week, 
 sum(reserve_visitors) as visitors
 FROM restaurant_visitors rv
 LEFT JOIN date_info di on rv.visit_date = di.calendar_date
-GROUP BY visit_date, day_of_week) vrw
+GROUP BY id, visit_date, day_of_week) vrw
 GROUP BY day_of_week
-ORDER BY avg_visitors_by_weekday DESC
+ORDER BY avg_visitors_by_store_by_weekday DESC
 
 ```
 
-Saturday is the weekday with more avg costumers (bar plot). 
-But the median (blue points) is almost the same on Friday and Saturday.
+In average, Saturday is the weekday with more avg visitors by restaurant (17).
+But again, the distribution of Friday and Saturday is not that different.
+The median number of visitors on each store in Friday and Saturday is 12.
+There are multiple outliers in all weekdays
 
-```{r weekday_w_more_visitors.barplot}
-weekday_w_more_visitors.barplot
+```{r weekday_w_more_visitors_by_rest.barplot}
+weekday_w_more_visitors_by_rest.barplot
 ```
 
-The distribution of Saturday tends to be higher, just with almost the same median as Friday.
-The distribution is skewed to the right, that's whey there's a big difference between median and mean.
-
-```{r weekday_w_more_visitors.boxplot}
-weekday_w_more_visitors.boxplot
-```
-
-Its important to view the full distribution when a mean vs mean analysis is
-requested. 
-
-```{r top_five_rest_in_holiday.densityplot}
-top_five_rest_in_holiday.densityplot
+```{r weekday_w_more_visitors_by_rest.boxplot}
+weekday_w_more_visitors_by_rest.boxplot
 ```
 
 
+## Question 3 {.tabset .tabset-fade .tabset-pills}
+
+> How was the percentage of growth of the amount of visitors’ week over week for the last four weeks of the data? You can solve this question using SQL or any other tool that you prefer. If you use other tools, please add your code or files. 
+
+### Summary
+
+```{sql, connection = con}
+WITH 
+last_date as (
+SELECT date((max(visit_date) - 4*7))
+FROM restaurant_visitors
+),
+daily_visitors as (
+SELECT 
+DATE_SUB(visit_date, INTERVAL DAYOFWEEK(visit_date)-2 DAY) as visit_week, 
+sum(reserve_visitors) as visitors
+FROM restaurant_visitors rv
+LEFT JOIN date_info di on rv.visit_date = di.calendar_date
+GROUP BY visit_week
+ORDER BY visit_week
+),
+weekly_growth as (
+(SELECT 
+visit_week,  
+visitors,
+visitors /
+lag(visitors, 1) OVER (ORDER BY visit_week) - 1 as weekly_visitors_growth
+FROM daily_visitors)
+)
+
+SELECT *
+FROM weekly_growth
+WHERE visit_week >= (select * from last_date)
 
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+There has been a continuous decrease in visitors the last 4 weeks
 
+```{r visitors_weekly_growth_percentage.lineplot}
+visitors_weekly_growth_percentage.lineplot
+```
+
+### Additional analysis
+
+There's a gap in 2016, from the weeks of Jul 25 to Sep 12.
+And it appears that the number of visitors drastically decreased from
+the week of Apr 17, 2017 onward.
+
+#### Weekly visitors
+
+```{r weekly_visitors.lineplot}
+weekly_visitors.lineplot
+```
+
+#### Monthly visitors
+
+```{r monthly_visitors.lineplot}
+monthly_visitors.lineplot
+```
+
+#### Daily visitors
+
+```{r daily_visitors.lineplot}
+daily_visitors.lineplot
+```
+
+The number of visitors last month drastically decreased. It appears that it went 
+to the same average of 2016. 
+But the number of unique restaurants didn't decreased as much.
+
+```{r monthly_restaurants.lineplot}
+monthly_restaurants.lineplot
+```
+
+The average visitors by restaurant decreased in May 2017. But in general is
+around 161 visitors.
+
+```{r monthly_avg_visitors_by_rest.lineplot}
+monthly_avg_visitors_by_rest.lineplot
+```
+
+## Question 4 {.tabset .tabset-fade .tabset-pills}
+
+> Forecast for the next six months, after the last date of the data, the sum of visitors of all the restaurants and validate the accuracy of your forecast.
+
+I created two forecasts and challenged them against each other:
+
+1. An ensemble model, the product of two forecasts. Number of restaurants and the average visitors by restaurant.This so the model can be more accurate and to have more control on the results if an actionable is known, i.e. a strategy to acquire more restaurants.
+2. I'll create a forecast directly for the total number of visitors. 
+
+The model with the least MAE was be used to forecast the next 6 months.
+
+### Forecast results
+
+```{r monthly_visitors_fcst.lineplot}
+monthly_visitors_fcst.lineplot
+```
+
+The mode shows that Jun is being forecasted with the same bouncing effect that Jun 2016
+had. Keeping close attention the the forecast and updating if required is important so the process improves month over month.
+
+### Process to select the forecast
+
+I'll show the results of the three time series:
+* Number of average visitors by restaurant
+* Number of restaurants
+* Number of visitors
+
+Given the change of distribution in the behavior of the time series
+and the shortage of data, I created the forecast using ARIMA,
+Averages, Naive, Seasonal Naive, and TBATS. And I will select the best forecast
+comparing the MAE of each model using a training and test set.
+
+#### Models metrics {.tabset}
+
+##### ARIMA
+
+Applying and auto.arima, p and q are 0.
+For average visitors by restaurant is purely white noise (d is 0).
+For restaurants is a random walk (d is 1).
+For total visitors is, again, a random walk (d is 1).
+Given average visitors is white noise the point forecast will be the same as
+a mean method.
+And because restaurants and total visitors are a random walk, the point forecast
+be the same as a naive model.
+Reference:  https://people.duke.edu/~rnau/411arim.htm
+
+###### Average visitors by restaurant
+
+```{r arima_avg_visitors_by_rest}
+arima_models[[1]]
+arima_model_result[[1]][,'MAE']
+```
+
+###### Unique restaurants
+
+The gap between train and test set MAE is really high
+```{r arima_unique_restaurants}
+arima_models[[2]]
+arima_model_result[[2]][,'MAE']
+```
+
+###### Total visitors
+
+The gap between train and test set MAE is really high
+```{r arima_total_visitors}
+arima_models[[3]]
+arima_model_result[[3]][,'MAE']
+```
+
+##### Average
+
+Residuals on avg visitors and restaurant are white noise. I could rely on the
+results.
+
+###### Average visitors by restaurant
+
+```{r average_avg_visitors_by_rest}
+avg_models[[1]]
+avg_model_result[[1]][,'MAE']
+```
+
+###### Unique restaurants
+
+```{r average_unique_restaurants}
+avg_models[[2]]
+avg_model_result[[2]][,'MAE']
+```
+
+###### Total visitors
+
+```{r average_total_visitors}
+avg_models[[3]]
+avg_model_result[[3]][,'MAE']
+```
+
+##### Naive
+
+Residuals on avg visitors and restaurant are not white noise, that means that
+something underlyin can be explained with more analysis. But I'll keep the 
+results if they succeed on the challenge.
+
+###### Average visitors by restaurant
+
+```{r naive_avg_visitors_by_rest}
+naive_models[[1]]
+naive_model_result[[1]][,'MAE']
+```
+
+###### Unique restaurants
+
+```{r naive_unique_restaurants}
+naive_models[[2]]
+naive_model_result[[2]][,'MAE']
+```
+
+###### Total visitors
+
+```{r naive_total_visitors}
+naive_models[[3]]
+naive_model_result[[3]][,'MAE']
+```
+
+##### Seasonal Naive
+
+Seasonal Naive is tricky to use when only one season has passed. Nonetheless here
+are the results.
+
+###### Average visitors by restaurant
+
+```{r snaive_avg_visitors_by_rest}
+snaive_models[[1]]
+snaive_model_result[[1]][,'MAE']
+```
+
+###### Unique restaurants
+
+```{r snaive_unique_restaurants}
+snaive_models[[2]]
+snaive_model_result[[2]][,'MAE']
+```
+
+###### Total visitors
+
+```{r snaive_total_visitors}
+snaive_models[[3]]
+snaive_model_result[[3]][,'MAE']
+```
+
+##### TBATS
+
+TBATS is the combination of Trigonometric seasonality, Box-Cox transformation, ARIMA errors Trend, Seasonal components
+
+This methodolgy tends to perform well when there's more than one single distribution in a time serie.
+Something that is presented in all of three.
+
+###### Average visitors by restaurant
+
+```{r tbats_avg_visitors_by_rest}
+tbats_models[[1]]
+tbats_model_result[[1]][,'MAE']
+```
+
+###### Unique restaurants
+
+```{r tbats_unique_restaurants}
+tbats_models[[2]]
+tbats_model_result[[2]][,'MAE']
+```
+
+###### Total visitors
+
+```{r tbats_total_visitors}
+tbats_models[[3]]
+tbats_model_result[[3]][,'MAE']
+```
+
+#### Method selection, challenging models
+After the previous analysis we discovered that:
+* TBATS had the best performance for average monthly visitors. Even though it had overfitting, had the least MAE against the test set. Future analysis would be required to maintain the forecast. 
+* Naive forecast had a good result on unique restaurants. Its a simple method but when erratic, it is a good and easy approach to forecast.
+
+Now I evaluated which model is more accurate. I did an ensemble model
+multiplying average visitors by unique restaurants results and compared it against
+total visitors forecast. I selected the method with the least MAE against test set.
+
+```{r mae_ttl_visitors}
+mae_ttl_visitors
+```
+
+Ensemble model is more accurate. It has an average absolute error of 1986.
+That means that the result in average each month will have a forecast ± 1986
+total visitors.
+
+Once the method was selected, I did and update on naive and TBATS model so they included
+the latest data. With that I forecasted from Jun to Nov
+
+
+
+## Question 5 {.tabset .tabset-fade .tabset-pills}
+
+> Based on the data and your ideas, plan strategies to double the total restaurant visitors in six months. 
+
+Strategies that in total could double the amount of visitors
+
+### Strategy 1
+1. Add more restaurants in cities with high population density.
+There are multiple cities where there's high population density but with lower
+number of restaurants.
+
+```{r restaurants_position}
+restaurants_position
+```
+
+Below is a Japan population density plot
 ![Japan population density](jp_population_density.png)
+
+### Strategy 2
+2. Add more genres of food
+There was a hughe increase after more genres were implemented.
+Izakaya had a great impact on visitors. I would suggest to explore a healthy
+or international food segment.
+
+```{r visitors_by_genre.barplot}
+visitors_by_genre.barplot
+```
+
+### Strategy 3
+3. Set reminder to reserve a visit to favorite place or suggest other options.
+Fridays and Saturdays have a higher number of days between reservation and
+visit. It could help send reminders to reserve a restaurant. And if the
+the restaurant is already fully booked we can suggest a similar place with
+available seats.
+
+```{r days_from_reserve_to_visit.boxplot}
+days_from_reserve_to_visit.boxplot
+```
+Note: You can zoom-in where the boxplots are located, all the outliers impact zooming-out the boxplot graph.
+
+### Strategy 4
+4. Gather more data.
+Lastly, the forecast tells us that maybe without any additional effort next month we 
+will without any doubt double the number of visitors of last month. So it would be a great time
+to get more data and more variables.
+
+## Question 6
+
+> Imagine that these restaurants are in your city (and not in Japan), what other data would you want to join in order of get more insights to increase the visitors?
+
+### User information. 
+This is crucial to understand what drives the user to
+reserve or purchase anything. Age, consumption habits, etc.
+
+### App usage information is extremely important.
+Maybe there's a high traffic of requests to visit a place but something in the
+funnel makes the user drop the reservation.
+
+### Prices of the places and more information of the restaurant is crucial
+There could be the opportunity to understand demand elasticity given different
+prices. I've stopped placing orders in some restaurants because the price
+increased a lot.
+
+# Challenge 2
+
+## Question 1 
+
+> How many active users and new users do we have for each week of November 2019 to February 2020?
+
+Definitions
+New user definition:
+Count of unique user ids on each user min order_info.order_date
+Active user definition:
+Unique user with order grouped by order_info.order_date.
+
+```{sql, connection = con}
+WITH 
+new_users as (
+SELECT 
+user_id, 
+min(order_date) as order_date
+FROM order_info oi
+GROUP BY user_id
+),
+weekly_new_users as (
+select 
+DATE_SUB(order_date, 
+	INTERVAL DAYOFWEEK(order_date)-2 DAY) as order_week, 
+count(distinct user_id) as new_users
+from new_users
+group by order_week
+),
+weekly_unique_active_users as (
+SELECT 
+DATE_SUB(order_date, 
+	INTERVAL DAYOFWEEK(order_date)-2 DAY) as order_week, 
+count(distinct user_id) as active_users
+FROM order_info oi
+GROUP BY order_week
+)
+
+SELECT *
+FROM weekly_unique_active_users wau 
+LEFT JOIN weekly_new_users wnu USING (order_week)
+WHERE order_week between '2019-11-01' and '2020-02-29'
+ORDER BY order_week
+
+```
+
+For question 4
+
+```{r new_and_active_weekly_users.lineplot}
+new_and_active_weekly_users.lineplot
+```
+
+## Question 2
+
+> How many reengaged users do we have (Reengaged: active this week that didn’t have an order last week but they did before that) for each week of November 2019 to February 2020?
+
+Reengaged Users metric definition:
+Count of unique user ids where the number of weeks between current order date
+and previous one is greater than 1.
+
+```{sql, connection = con}
+WITH 
+user_by_week AS (
+SELECT 
+*,
+lag(order_week, 1) OVER (PARTITION BY user_id ORDER BY user_id) previous_order_week
+FROM
+(SELECT 
+user_id,
+DATE_SUB(order_date, 
+	INTERVAL DAYOFWEEK(order_date)-2 DAY) as order_week
+FROM order_info oi
+GROUP BY user_id, order_week
+ORDER BY user_id, order_week) upw
+),
+reengaged_users AS (
+SELECT *, floor(DATEDIFF(order_week, previous_order_week)/7) as inactive_weeks
+FROM user_by_week ubw
+WHERE floor(DATEDIFF(order_week, previous_order_week)/7) > 1
+)
+
+SELECT order_week, count(distinct user_id) as reengaged_users
+FROM reengaged_users ru
+WHERE order_week between '2019-11-01' and '2020-02-29'
+GROUP BY order_week
+ORDER BY order_week
+
+```
+
+For question 4
+
+```{r weekly_reengaged_users.lineplot}
+weekly_reengaged_users.lineplot
+```
+
+## Question 3
+
+> What’s the average GMV by type of user (Active, new, reengaged) for each week of November 2019 to February 2020?
+
+IMPORTANT: The definitions of each of the three user types are not mutually
+exclusive, new users and reengaged users are in fact active users.
+
+```{sql, connection = con}
+WITH 
+user_by_week AS (
+SELECT 
+*,
+lag(order_week, 1) OVER (PARTITION BY user_id ORDER BY user_id) previous_order_week
+FROM
+(SELECT 
+user_id,
+DATE_SUB(order_date, 
+	INTERVAL DAYOFWEEK(order_date)-2 DAY) as order_week
+FROM order_info oi
+GROUP BY user_id, order_week
+ORDER BY user_id, order_week) upw
+),
+reengaged_users AS (
+SELECT *, floor(DATEDIFF(order_week, previous_order_week)/7) as inactive_weeks
+FROM user_by_week ubw
+WHERE floor(DATEDIFF(order_week, previous_order_week)/7) > 1
+),
+weekly_reengaged_users AS (
+SELECT order_week, user_id
+FROM reengaged_users ru
+GROUP BY order_week, user_id
+ORDER BY order_week, user_id
+),
+reengaged_users_orders AS (
+SELECT 
+wru.order_week, 
+avg(gmv) as avg_gmv
+FROM weekly_reengaged_users wru
+LEFT JOIN order_info oi ON 
+	(wru.user_id = oi.user_id AND
+		DATE_SUB(oi.order_date, 
+			INTERVAL DAYOFWEEK(order_date)-2 DAY) =
+		wru.order_week)
+GROUP BY wru.order_week
+),
+new_users_orders AS (
+SELECT 
+DATE_SUB(oi.order_date, 
+	INTERVAL DAYOFWEEK(order_date)-2 DAY) as order_week, 
+avg(gmv) as avg_gmv
+FROM user_info ui
+LEFT JOIN order_info oi ON 
+	(ui.first_order = oi.order_id AND oi.user_id = ui.user_id)
+GROUP BY order_week
+),
+active_users_orders as (
+SELECT 
+DATE_SUB(order_date, 
+	INTERVAL DAYOFWEEK(order_date)-2 DAY) as order_week, 
+avg(gmv) as avg_gmv
+FROM order_info oi
+GROUP BY order_week
+)
+
+SELECT *, 'New User' AS user_type
+FROM new_users_orders nuo
+WHERE nuo.order_week between '2019-11-01' and '2020-02-29'
+UNION
+SELECT *, 'Active User' AS user_type
+FROM active_users_orders auo
+WHERE auo.order_week between '2019-11-01' and '2020-02-29'
+UNION
+SELECT *, 'Reengaged User' AS user_type
+FROM reengaged_users_orders ruo
+WHERE ruo.order_week between '2019-11-01' and '2020-02-29'
+
+```
+
+For question 4
+
+```{r avg_gmv_per_user_type.lineplot}
+avg_gmv_per_user_type.lineplot
+```
+
+## Question 4
+
+> On your preferred tool (Excel, Python, R, etc.) please create charts for each of your results.
+
+I placed the graphs on each question
+
+## Question 5
+
+> Based on the charts give your opinion/recommendations regarding to the different type of users.
+
+### Recommentaion 1
+1. Create segments for recurring users based on the number of orders they've made. 
+
+It's important to have order_date as time stamp.
+It allows you to understand whats the number of orders before churning and
+the level of engagement the users have with your application.
+
+```{r avg_gmv_by_order_n.lineplot}
+avg_gmv_by_order_n.lineplot
+```
+
+Order number definition: Number of order by user_id, is cumulative.
+
+### Recommentaion 2
+2. A high percentage of users only has 1 single order. If DiDi has a high churn rate, then it won't be able to have a sustainable growth. There should be more analysis into why this is happening.
+
+It's important to have order_date as time stamp.
+It allows you to understand whats the number of orders before churning and
+the level of engagement the users have with your application.
+
+```{r inactive_users}
+inactive_users.sankeyplot
+```
+
+### Recommentaion 3
+3. There should be experiments with behavioral economics to accelerate engagement and ordering. As the number of order increases, the number of days to recur decreases.
+
+```{r days_to_recur.boxplot}
+days_to_recur.boxplot
+```
 

@@ -16,7 +16,7 @@ weekday_w_more_visitors <-
             query = 'C1_Q2_weekday_w_more_visitors.sql',
             exit_after_fetch = F)
 
-# Answer 2, avg customers by store.
+# Answer 2, avg customers by restaurant.
 weekday_w_more_visitors_by_rest <-
   get_query(con = con,
             query = 'C1_Q2_weekday_w_more_visitors_by_rest.sql',

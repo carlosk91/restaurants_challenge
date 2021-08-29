@@ -7,60 +7,72 @@ max_month <-
 #### Question 1 ####
 # The top restaurant has an average of 33 daily customers on holidays
 top_five_rest_in_holiday.barplot <-
-  ggplotly(top_five_rest_in_holiday %>%
-  mutate(position = paste0('Restaurant #', row_number())) %>%
-  ggplot(aes(y = avg_daily_visitors_on_holiday, x = position)) +
-  geom_bar(stat = "identity") +
-  labs(
-    title = 'Top 5 restaurants avg daily visitors on holiday',
-    x = 'Top 5 restaurants',
-    y = 'Avg daily visitors on holiday'
-  ))
+  ggplotly(
+    top_five_rest_in_holiday %>%
+      mutate(position = paste0('Restaurant #', row_number())) %>%
+      ggplot(aes(y = avg_daily_visitors_on_holiday, x = position)) +
+      geom_bar(stat = "identity") +
+      labs(title = 'Top 5 restaurants avg daily visitors on holiday',
+           x = 'Top 5 restaurants',
+           y = 'Avg daily visitors on holiday')
+  )
 
 # But in reality th rest of the top restaurants are no that easy to separate.
 # The next top restaurants can be re-arranged using the median, or the total
 # distribution.
 top_five_rest_in_holiday.boxplot <-
-  ggplotly(restaurant_visitors %>%
-  inner_join(top_five_rest_in_holiday %>%
-               mutate(position = paste0('Restaurant #', row_number())),
-             by = c('id' = 'restaurant_id')) %>%
-  left_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
-  filter(holiday_flg == 1) %>%
-  group_by(position, visit_date) %>%
-  summarise(visitors = sum(reserve_visitors)) %>%
-  ggplot(aes(x = position, y = visitors, fill = position)) +
-  geom_boxplot() +
-  labs(
-    title = 'Top 5 restaurants daily visitors on holiday',
-    x = 'Top 5 restaurants',
-    y = 'Quartiles of daily visitors on holiday', 
-    fill = 'Top 5 Restaurants'
-  ) + 
-  theme(legend.position = "none"))
+  ggplotly(
+    restaurant_visitors %>%
+      inner_join(
+        top_five_rest_in_holiday %>%
+          mutate(position = paste0('Restaurant #', row_number())),
+        by = c('id' = 'restaurant_id')
+      ) %>%
+      left_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
+      filter(holiday_flg == 1) %>%
+      group_by(position, visit_date) %>%
+      summarise(visitors = sum(reserve_visitors)) %>%
+      ggplot(aes(
+        x = position, y = visitors, fill = position
+      )) +
+      geom_boxplot() +
+      labs(
+        title = 'Top 5 restaurants daily visitors on holiday',
+        x = 'Top 5 restaurants',
+        y = 'Quartiles of daily visitors on holiday',
+        fill = 'Top 5 Restaurants'
+      ) +
+      theme(legend.position = "none")
+  )
 
 # Its important to make sure that the distribution is normal when you want to
 # compare mean against mean.
 # Restaurants from 2 to 5 follow a Beta-like distribution.
 top_five_rest_in_holiday.densityplot <-
-  ggplotly(restaurant_visitors %>%
-  inner_join(top_five_rest_in_holiday %>%
-               mutate(position = paste('Restaurant Top ', row_number())),
-             by = c('id' = 'restaurant_id'))  %>%
-  left_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
-  filter(holiday_flg == 1) %>%
-  group_by(position, visit_date) %>%
-  summarise(visitors = sum(reserve_visitors)) %>%
-  ggplot(aes(x = visitors, color = position, fill = position)) +
-  geom_density(alpha = 0.15) +
-  labs(
-    title = 'Top 5 restaurants distribution of daily visitors on holiday',
-    x = 'Visitors on holiday',
-    y = 'Distribution', 
-    fill = 'Top 5 Restaurants'
-  ) +
-  scale_y_continuous(labels = scales::percent) +
-  guides(color = "none"))
+  ggplotly(
+    restaurant_visitors %>%
+      inner_join(
+        top_five_rest_in_holiday %>%
+          mutate(position = paste('Restaurant Top ', row_number())),
+        by = c('id' = 'restaurant_id')
+      )  %>%
+      left_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
+      filter(holiday_flg == 1) %>%
+      group_by(position, visit_date) %>%
+      summarise(visitors = sum(reserve_visitors)) %>%
+      ggplot(aes(
+        x = visitors, color = position, fill = position
+      )) +
+      geom_density(alpha = 0.2) +
+      labs(
+        title = 'Top 5 restaurants distribution of daily visitors on holiday',
+        x = 'Visitors on holiday',
+        y = 'Distribution',
+        fill = 'Top 5 Restaurants'
+      ) +
+      scale_y_continuous(labels = scales::percent) +
+      guides(color = "none")
+  )
 
 #### Question 2 ####
 median_weekday_visitors <-
@@ -71,8 +83,10 @@ median_weekday_visitors <-
   summarise(visitors = sum(reserve_visitors)) %>%
   ungroup() %>%
   group_by(day_of_week) %>%
-  summarise(median_visitors = median(visitors, na.rm = T),
-            avg_visitors = mean(visitors, na.rm = T)) %>%
+  summarise(
+    median_visitors = median(visitors, na.rm = T),
+    avg_visitors = mean(visitors, na.rm = T)
+  ) %>%
   ungroup()
 
 # Saturday is the weekday with more avg costumers (bar plot).
@@ -80,32 +94,40 @@ median_weekday_visitors <-
 # The distribution is skewed to the right, that's whey there's a big difference
 # between median and mean.
 weekday_w_more_visitors.barplot <-
-  ggplotly(weekday_w_more_visitors %>%
-  mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
-  inner_join(median_weekday_visitors) %>%
-  ggplot(aes(x = day_of_week)) +
-  geom_bar(stat = 'identity',
-           aes(y = avg_visitors_by_weekday),
-           alpha = 0.75) +
-  geom_point(aes(y = median_visitors), colour = "blue") +
-  labs(title = 'Avg and Meadian visitors by weekday',
-       x = 'Weekday',
-       y = 'Avg (bar plot) and Median (blue dots) visitors'))
+  ggplotly(
+    weekday_w_more_visitors %>%
+      mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
+      inner_join(median_weekday_visitors) %>%
+      ggplot(aes(x = day_of_week)) +
+      geom_bar(
+        stat = 'identity',
+        aes(y = avg_visitors_by_weekday),
+        alpha = 0.75
+      ) +
+      geom_point(aes(y = median_visitors), colour = "blue") +
+      labs(title = 'Avg and Meadian visitors by weekday',
+           x = 'Weekday',
+           y = 'Avg (bar plot) and Median (blue dots) visitors')
+  )
 
 # But the distribution of Saturday tends to be higher.
 # Just with almost the same median.
 weekday_w_more_visitors.boxplot <-
-  ggplotly(restaurant_visitors %>%
-  inner_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
-  mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
-  group_by(visit_date, day_of_week) %>%
-  summarise(visitors = sum(reserve_visitors)) %>%
-  ggplot(aes(y = visitors, x = day_of_week, fill = day_of_week)) +
-  geom_boxplot() +
-  labs(title = 'Distribution of visitors by weekday',
-       x = 'Weekday',
-       y = 'Visitors') +
-  guides(fill = "none"))
+  ggplotly(
+    restaurant_visitors %>%
+      inner_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
+      mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
+      group_by(visit_date, day_of_week) %>%
+      summarise(visitors = sum(reserve_visitors)) %>%
+      ggplot(aes(
+        y = visitors, x = day_of_week, fill = day_of_week
+      )) +
+      geom_boxplot() +
+      labs(title = 'Distribution of visitors by weekday',
+           x = 'Weekday',
+           y = 'Total Visitors') +
+      guides(fill = "none")
+  )
 
 # In average, Saturday is the weekday with more avg visitors by store.
 # In other words you could say that on Saturday you have an expected value of
@@ -125,39 +147,52 @@ median_weekday_restaurant_visitors_by_rest <-
             avg_visitors = mean(visitors))
 
 weekday_w_more_visitors_by_rest.barplot <-
-  weekday_w_more_visitors_by_rest %>%
-  mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
-  inner_join(median_weekday_restaurant_visitors_by_rest) %>%
-  ggplot(aes(x = day_of_week)) +
-  geom_bar(stat = 'identity',
-           aes(y = avg_visitors_by_store_by_weekday),
-           alpha = 0.75) +
-  geom_point(aes(y = median_visitors), colour = "blue") +
-  labs(title = 'Avg and Meadian visitors by weekday by restaurant',
-       x = 'Weekday',
-       y = 'Avg (bar plot) and Median (blue dots) visitors by restaurant')
+  ggplotly(
+    weekday_w_more_visitors_by_rest %>%
+      mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
+      inner_join(median_weekday_restaurant_visitors_by_rest) %>%
+      ggplot(aes(x = day_of_week)) +
+      geom_bar(
+        stat = 'identity',
+        aes(y = avg_visitors_by_store_by_weekday),
+        alpha = 0.75
+      ) +
+      geom_point(aes(y = median_visitors), colour = "blue") +
+      labs(title = 'Avg and Meadian visitors by weekday by restaurant',
+           x = 'Weekday',
+           y = 'Avg (bar plot) and Median (blue dots) visitors by restaurant')
+  )
 
 weekday_w_more_visitors_by_rest.boxplot <-
-  restaurant_visitors %>%
-  inner_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
-  mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
-  group_by(id, visit_date, day_of_week) %>%
-  summarise(visitors = sum(reserve_visitors)) %>%
-  ggplot(aes(y = visitors, colour = day_of_week)) +
-  geom_boxplot() +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  labs(title = 'Distribution of visitors by weekday by restaurant',
-       x = 'Weekday',
-       y = 'Visitors')
+  ggplotly(
+    restaurant_visitors %>%
+      inner_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
+      mutate(day_of_week = factor(day_of_week, levels = levels_weekday())) %>%
+      group_by(id, visit_date, day_of_week) %>%
+      summarise(visitors = sum(reserve_visitors)) %>%
+      ggplot(aes(
+        y = visitors, x = day_of_week, fill = day_of_week
+      )) +
+      geom_boxplot() +
+      labs(title = 'Distribution of visitors by weekday by restaurant',
+           x = 'Weekday',
+           y = 'Visitors by restaurant') +
+      guides(fill = "none")
+  )
 
 #### Question 3 ####
 # There has been a continuous decrease in visitors the last 4 weeks
 visitors_weekly_growth_percentage.lineplot <-
-  visitors_weekly_growth_percentage %>%
-  ggplot(aes(x = visit_week, y = weekly_visitors_growth)) +
-  geom_line() +
-  scale_y_continuous(labels = scales::percent)
+  ggplotly(
+    visitors_weekly_growth_percentage %>%
+      ggplot(aes(x = visit_week, y = weekly_visitors_growth)) +
+      geom_line() +
+      scale_y_continuous(labels = scales::percent) +
+      labs(title = 'Weekly growth rate',
+           x = 'Week',
+           y = 'Growth rate') +
+      scale_x_date(date_labels = "%b %d, %Y")
+  )
 
 # There's a gap in 2016, from the weeks of Jul 25 to Sep 12.
 # And it appears that the number of visitors drastically decreased from
@@ -182,7 +217,8 @@ weekly_visitors.lineplot <-
       scale_y_continuous(labels = scales::comma) +
       labs(title = 'Weekly visitors',
            x = 'Week',
-           y = 'Visitors')
+           y = 'Visitors') +
+      scale_x_date(date_labels = "%b %d, %Y")
   )
 
 daily_visitors <-
@@ -199,7 +235,8 @@ daily_visitors.lineplot <-
       scale_y_continuous(labels = scales::comma) +
       labs(title = 'Daily visitors',
            x = 'Date',
-           y = 'Visitors')
+           y = 'Visitors') +
+      scale_x_date(date_labels = "%b %d, %Y")
   )
 
 
@@ -221,7 +258,8 @@ monthly_visitors.lineplot <-
       scale_y_continuous(labels = scales::comma) +
       labs(title = 'Monthly visitors',
            x = 'Month',
-           y = 'Visitors')
+           y = 'Visitors') +
+      scale_x_date(date_labels = "%b %Y")
   )
 
 # But the number of unique restaurants didn't decreased as much
@@ -242,7 +280,8 @@ monthly_restaurants.lineplot <-
       scale_y_continuous(labels = scales::comma) +
       labs(title = 'Monthly restaurants',
            x = 'Month',
-           y = 'Restaurants')
+           y = 'Restaurants') +
+      scale_x_date(date_labels = "%b %Y")
   )
 
 # The average visitors by restaurant decreased in May 2017. But in general is
@@ -267,7 +306,8 @@ monthly_avg_visitors_by_rest.lineplot <-
       scale_y_continuous(labels = scales::comma) +
       labs(title = 'Monthly avg visitors by restaurant',
            x = 'Month',
-           y = 'Avg visitors by restaurant')
+           y = 'Avg visitors by restaurant') +
+      scale_x_date(date_labels = "%b %Y")
   )
 
 #### Question 4 ####
@@ -546,18 +586,19 @@ monthly_visitors_fcst.lineplot <-
       scale_y_continuous(labels = scales::comma) +
       labs(title = 'Monthly visitors',
            x = 'Month',
-           y = 'Visitors')
+           y = 'Visitors') +
+      scale_x_date(date_labels = "%b %Y")
   )
 
 #### Question 5 ####
-full_dataset <- 
+full_dataset <-
   restaurant_visitors %>%
   inner_join(store_info, by = c('id' = 'store_id')) %>%
   inner_join(date_info, by = c('visit_date' = 'calendar_date')) %>%
   mutate(
     day_of_week = factor(day_of_week, levels = levels_weekday()),
     visit_month = floor_date(visit_date, 'month'),
-    days_between_reserve_and_visit = as.numeric(visit_date - 
+    days_between_reserve_and_visit = as.numeric(visit_date -
                                                   as_date(reserve_datetime))
   )
 
@@ -568,30 +609,30 @@ full_dataset <-
 
 jp_map <-  map('world2', 'japan', plot = FALSE, fill = TRUE)
 
-restaurants_position <-
-  autoplot(jp_map, geom = 'polygon', fill = 'subregion') +
-  geom_point(data  = store_info, aes(x = longitude, y = latitude),
-             color = 'blue', size = 0.2) +
-  theme(legend.position = "none")
-
-qmplot(x=longitude, y=latitude, 
-       data = store_info, 
-       geom = "blank",
-       maptype = "toner-background", 
-       darken = .5, 
-       legend = "topright") + 
-  stat_density_2d(aes(fill = ..level..),
-                  geom = "polygon", 
-                  alpha = .2,
-                  color = NA) + 
-  scale_fill_gradient2(low = "blue", 
-                       mid = "green", 
+restaurants_position <- 
+  qmplot(
+  x = longitude,
+  y = latitude,
+  data = store_info,
+  geom = "blank",
+  maptype = "toner-background",
+  darken = .5,
+  legend = "topright"
+) +
+  stat_density_2d(
+    aes(fill = ..level..),
+    geom = "polygon",
+    alpha = .2,
+    color = NA
+  ) +
+  scale_fill_gradient2(low = "blue",
+                       mid = "green",
                        high = "red") +
   geom_point(color = 'blue', size = 0.2)
 
 # b) Add more genres of food
-# There was a hughe increase after more genres were implemented. 
-# Izakaya had a great impact on visitors. I would suggest to explore a healthy 
+# There was a hughe increase after more genres were implemented.
+# Izakaya had a great impact on visitors. I would suggest to explore a healthy
 # or international food segment.
 
 visitors_by_genre.barplot <-
@@ -610,41 +651,43 @@ visitors_by_genre.barplot <-
         x = 'Month',
         y = 'Visitors',
         fill = 'Genre'
-      )
+      ) +
+      scale_x_date(date_labels = "%b %Y")
   )
 
-full_dataset %>%
-  mutate()
-
-# c) Set reminder to reserve a visit to favorite place or suggest other option.
+# c) Set reminder to reserve a visit to favorite place or suggest other options.
 # Fridays and Saturdays have a higher number of days between reservation and
 # visit. It could help send reminders to reserve a restaurant. And if the
-# the restaurant is already fully booked we can suggest a similar place with 
+# the restaurant is already fully booked we can suggest a similar place with
 # available seats.
 
-days_outlier <- 
+days_outlier <-
   boxplot.stats(full_dataset$days_between_reserve_and_visit)$stats[c(1, 5)]
 
-days_from_reserve_to_visit.boxplot <- 
-  full_dataset %>%
-  ggplot(aes(y = days_between_reserve_and_visit, 
+days_from_reserve_to_visit.boxplot <-
+  ggplotly(full_dataset %>%
+  ggplot(aes(y = days_between_reserve_and_visit,
+             x = day_of_week,
              fill = day_of_week)) +
-  geom_boxplot() + 
-  coord_cartesian(ylim = days_outlier*1.05) +
-  labs(
-    title = 'Days from reservation to visit',
-    x = 'Weekday of the visit',
-    y = 'Days',
-    fill = 'Day of week'
-  )
+  geom_boxplot() +
+  labs(title = 'Days from reservation to visit',
+       x = 'Weekday of the visit',
+       y = 'Days from reservation to visit',
+       fill = 'Day of week') +
+  theme(legend.position = "none"))
+
+# d) Gather more data.
+# Lastly, the forecast tells us that maybe without any additional effort next month we 
+# will without any doubt double the number of visitors of last month. So it would be a great time
+# to get more data and more variables.
 
 #### Question 6 ####
-# a) User information. This is crucial to understand what drives the user to 
+# a) User information. This is crucial to understand what drives the user to
 # reserve or purchase anything. Age, consumption habits, etc.
-# b) App usage information is extremely important. 
+# b) App usage information is extremely important.
 # Maybe there's a high traffic of requests to visit a place but something in the
 # funnel makes the user drop the reservation.
-# c) Prices of the places and more information of the restaurant is important. 
+# c) Prices of the places and more information of the restaurant is important.
 # There could be the opportunity to understand demand elasticity given different
-# prices. I've stopped placing orders in some restaurants because the price 
+# prices. I've stopped placing orders in some restaurants because the price
 # increased a lot.

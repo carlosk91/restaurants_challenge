@@ -16,7 +16,7 @@ new_and_active_weekly_users.lineplot <-
         color = user_type
       )) +
       geom_line() +
-      scale_x_date(date_labels = "%b %Y") +
+      scale_x_date(date_labels = "%b %d, %Y") +
       scale_y_continuous(labels = scales::comma) +
       labs(
         title = 'Weekly users',
@@ -94,7 +94,7 @@ full_order_dataset <-
   ) %>%
   ungroup()
 
-full_order_dataset %$%
+order_n_quartiles <- full_order_dataset %$%
   quantile(order_n, c(0, .25, .50, .75, 1))
 
 
@@ -106,16 +106,24 @@ avg_gmv_by_order_n <-
   ) %>%
   summarise(avg_gmv = mean(gmv))
 
-avg_gmv_by_order_n <-
-  avg_gmv_by_order_n %>%
+avg_gmv_by_order_n.lineplot <-
+  ggplotly(avg_gmv_by_order_n %>%
   ggplot(aes(x = order_week, y = avg_gmv, color = order_n_bracket)) +
-  geom_line()
+  geom_line() +
+  scale_x_date(date_labels = "%b %Y") +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(
+    title = 'Average GMV by order number',
+    x = 'Order week',
+    y = 'Avg GMV',
+    color = 'Order number'
+  ))
 
 # In general as the number of orders increases the ticket size decreases.
 
 
-# b) A high percentage of users only has 1 single order. If there's a high 
-# churn rate then DiDi won't be able to have a sustainable growth.
+# b) A high percentage of users only has 1 single order. If DiDi has a high 
+# churn rate, then it won't be able to have a sustainable growth.
 links <-
   full_order_dataset %>%
   filter(order_n < 4) %>%
@@ -136,7 +144,7 @@ nodes <- data.frame(name = c(as.character(links$source),
 links$IDsource <- match(links$source, nodes$name) - 1
 links$IDtarget <- match(links$target, nodes$name) - 1
 
-p <- sankeyNetwork(
+inactive_users.sankeyplot <- sankeyNetwork(
   Links = links,
   Nodes = nodes,
   Source = "IDsource",
@@ -146,19 +154,26 @@ p <- sankeyNetwork(
   units = 'Orders',
   sinksRight = FALSE
 )
-p
+
 
 
 # c) There should be experiments with behavioral economics to accelerate adoption.
 # As the number of order increases, the number of days to recur decreases.
 ylim1 <- boxplot.stats(full_order_dataset$days_to_recur)$stats[c(1, 5)]
 
-full_order_dataset %>%
+days_to_recur.boxplot <- 
+  ggplotly(full_order_dataset %>%
   filter(order_n < 5 & order_n > 1 & !is.na(days_to_recur)) %>%
   mutate(order_number = as.factor(order_n)) %>%
-  ggplot(aes(y = days_to_recur, fill = order_number)) +
+  ggplot(aes(y = days_to_recur, x = order_number, fill = order_number)) +
   geom_boxplot() +
-  coord_cartesian(ylim = ylim1*1.05)
+  coord_cartesian(ylim = ylim1*1.05) +
+  labs(
+    title = 'Average GMV by order number',
+    x = 'Order number',
+    y = 'days to recur',
+    fill = 'Order number'
+  ))
 
 
 
