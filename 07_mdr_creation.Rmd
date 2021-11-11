@@ -1,5 +1,5 @@
 ---
-title: "DiDi Challenge"
+title: "Restaurants Challenge"
 author: "Carlos Kelly"
 date: "2021-08-29"
 output: 
@@ -18,7 +18,7 @@ source("00_main.R", local = knitr::knit_global())
 
 # Summary and context
 
-This markdown document will answer the questions shared by DiDi hiring manager.
+This markdown document will answer the questions multiple questions shared.
 All of these are answered using SQL and R script.
 
 A localhost database was created in order to show the query results. Because of 
@@ -695,7 +695,7 @@ avg_gmv_by_order_n.lineplot
 Order number definition: Number of order by user_id, is cumulative.
 
 ### Recommentaion 2
-2. A high percentage of users only has 1 single order. If DiDi has a high churn rate, then it won't be able to have a sustainable growth. There should be more analysis into why this is happening.
+2. A high percentage of users only has 1 single order. If the company has a high churn rate, then it won't be able to have a sustainable growth. There should be more analysis into why this is happening.
 
 It's important to have order_date as time stamp.
 It allows you to understand whats the number of orders before churning and
